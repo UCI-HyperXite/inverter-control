@@ -11,52 +11,52 @@ const unsigned pinV_L = 22;
 
 void initialize_pins()
 {
-    const std::vector<unsigned> pins = {pinU_H, pinU_L, pinV_H, pinV_L};
-    for (unsigned pin : pins)
-    {
-        gpio_init(pin);
-        gpio_set_dir(pin, GPIO_OUT);
-    }
+	const std::vector<unsigned> pins = {pinU_H, pinU_L, pinV_H, pinV_L};
+	for (unsigned pin : pins)
+	{
+		gpio_init(pin);
+		gpio_set_dir(pin, GPIO_OUT);
+	}
 }
 
 void set_inverter_pins_(bool v)
 {
-    gpio_put(pinU_H, v);
-    gpio_put(pinU_L, !v);
-    gpio_put(pinV_H, !v);
-    gpio_put(pinV_L, v);
+	gpio_put(pinU_H, v);
+	gpio_put(pinU_L, !v);
+	gpio_put(pinV_H, !v);
+	gpio_put(pinV_L, v);
 }
 
 void run_one_inverter(int N)
 {
-    double qe = 0.0;
-    for (int i = 0; i < N; ++i)
-    {
-        double s = std::sin(i * 2 * M_PI / N);
-        qe += s;
+	double qe = 0.0;
+	for (int i = 0; i < N; ++i)
+	{
+		double s = std::sin(i * 2 * M_PI / N);
+		qe += s;
 
-        bool v = qe > 0;
-        int fix = v ? 1 : -1;
-        qe -= fix;
+		bool v = qe > 0;
+		int fix = v ? 1 : -1;
+		qe -= fix;
 
-        set_inverter_pins_(v);
-    }
+		set_inverter_pins_(v);
+	}
 }
 
 int main()
 {
-    initialize_pins();
-    int frequency = 2000;
+	initialize_pins();
+	int frequency = 2000;
 
-    while (true)
-    {
-        run_one_inverter(frequency);
+	while (true)
+	{
+		run_one_inverter(frequency);
 
-        if (time_us_32() % 10000000 > 5000000)
-        {
-            frequency = (frequency == 2000) ? 3000 : 2000;
-        }
-    }
+		if (time_us_32() % 10000000 > 5000000)
+		{
+			frequency = (frequency == 2000) ? 3000 : 2000;
+		}
+	}
 
-    return 0;
+	return 0;
 }
