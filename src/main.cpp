@@ -4,14 +4,22 @@
 #include <cmath>
 #include <vector>
 
-const unsigned pinU_H = 28;
-const unsigned pinU_L = 27;
-const unsigned pinV_H = 26;
-const unsigned pinV_L = 22;
+const unsigned pinU_H = 21;
+const unsigned pinU_L = 20;
+const unsigned pinV_H = 19;
+const unsigned pinV_L = 18;
+const unsigned pinW_H = 17;
+const unsigned pinW_L = 16;
 
 void initialize_pins()
 {
-	const std::vector<unsigned> pins = {pinU_H, pinU_L, pinV_H, pinV_L};
+	const std::vector<unsigned> pins = {
+		pinU_H,
+		pinU_L,
+		pinV_H,
+		pinV_L,
+		pinW_H,
+		pinW_L};
 	for (unsigned pin : pins)
 	{
 		gpio_init(pin);
@@ -19,12 +27,10 @@ void initialize_pins()
 	}
 }
 
-void set_inverter_pins_(bool v)
+void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
 {
-	gpio_put(pinU_H, v);
-	gpio_put(pinU_L, !v);
-	gpio_put(pinV_H, !v);
-	gpio_put(pinV_L, v);
+	gpio_put(pin_H, v);
+	gpio_put(pin_L, !v);
 }
 
 void run_one_inverter(int N)
@@ -32,14 +38,48 @@ void run_one_inverter(int N)
 	double qe = 0.0;
 	for (int i = 0; i < N; ++i)
 	{
-		double s = std::sin(i * 2 * M_PI / N);
+		double s = std::sin(2 * M_PI * i / N);
 		qe += s;
-
 		bool v = qe > 0;
 		int fix = v ? 1 : -1;
 		qe -= fix;
+		set_inverter_pins_(v, pinU_H, pinU_L);
+	}
+}
 
-		set_inverter_pins_(v);
+void run_inverter(int N)
+{
+	double qeU = 0.0;
+	double qeV = 0.0;
+	double qeW = 0.0;
+
+	for (int i = 0; i < N; ++i)
+	{
+		double x = 2 * M_PI * i / N;
+
+		double sU = std::sin(x);				// 0 degrees
+		double sV = std::sin(x + 2 * M_PI / 3); // 120 degrees
+		double sW = std::sin(x + 4 * M_PI / 3); // 240 degrees
+
+		qeU += sU;
+		qeV += sV;
+		qeW += sW;
+
+		bool vU = qeU > 0;
+		bool vV = qeV > 0;
+		bool vW = qeW > 0;
+
+		int fixU = vU ? 1 : -1;
+		int fixV = vV ? 1 : -1;
+		int fixW = vW ? 1 : -1;
+
+		qeU -= fixU;
+		qeV -= fixV;
+		qeW -= fixW;
+
+		set_inverter_pins_(vU, pinU_H, pinU_L);
+		set_inverter_pins_(vV, pinV_H, pinV_L);
+		set_inverter_pins_(vW, pinW_H, pinW_L);
 	}
 }
 
@@ -50,7 +90,7 @@ int main()
 
 	while (true)
 	{
-		run_one_inverter(frequency);
+		run_inverter(frequency);
 
 		if (time_us_32() % 10000000 > 5000000)
 		{
