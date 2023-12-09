@@ -11,8 +11,6 @@ const unsigned pinV_L = 18;
 const unsigned pinW_H = 17;
 const unsigned pinW_L = 16;
 
-int velocity = 0;
-
 void initialize_pins()
 {
 	const std::vector<unsigned> pins = {
