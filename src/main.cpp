@@ -11,6 +11,9 @@ const unsigned pinV_L = 18;
 const unsigned pinW_H = 17;
 const unsigned pinW_L = 16;
 
+const double sin_120 = 0.866025;
+const double sin_240 = -sin_120;
+
 void initialize_pins()
 {
 	const std::vector<unsigned> pins = {
@@ -57,9 +60,11 @@ void run_inverter(int N)
 	{
 		double x = 2 * M_PI * i / N;
 
-		double sU = std::sin(x);				// 0 degrees
-		double sV = std::sin(x + 2 * M_PI / 3); // 120 degrees
-		double sW = std::sin(x + 4 * M_PI / 3); // 240 degrees
+		double sU = std::sin(x);
+		double cosX = std::cos(x);
+		double sinAcosB = -(sU >> 1);
+		double sV = sinAcosB + sin_120 * cosX;
+		double sW = sinAcosB + sin_240 * cosX;
 
 		qeU += sU;
 		qeV += sV;
