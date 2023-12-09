@@ -29,6 +29,26 @@ void initialize_pins()
 	}
 }
 
+long calculate_frequency(double velocity)
+{
+	// Take the equation the propulsion subteam provided, substitute the
+	// constants, and simplify. The resulting equation is a quadratic, where
+	// x is the frequency and the velocity is a constant. This means that
+	// we can use the quadratic formula and solve for the appropriate frequency.
+	// Note that since this is a quadratic, there are two solutions. We
+	// default to the solution that has the higher frequency for increased
+	// stability.
+
+	// 9.5319822065e12 * (0.0875352187005x-v_r)^2
+	//    - 3.0699323466e13 * (0.0875352187005x-v_r)
+	//     + 5.0721087175e12 = 0
+
+	// Run the quadratic formula on these coefficents to solve for
+	// u = 0.0875352187005x-v_r and solve for x.
+
+	return 34.7970861766 + velocity * 11.4239732858;
+}
+
 void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
 {
 	gpio_put(pin_H, v);
