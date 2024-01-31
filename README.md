@@ -110,6 +110,9 @@ $ make
 If errors occur, try restarting your terminal and then running the
 commands again.
 
+**For Windows devices, the `.vscode/` directory should automatically allow
+you to press the Build button that will do the above.**
+
 ## Running the Code
 
 Now that the UF2 file has been generated, connect the Pico to your computer
