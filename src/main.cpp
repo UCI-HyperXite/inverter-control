@@ -11,6 +11,8 @@ const unsigned pinV_L = 18;
 const unsigned pinW_H = 17;
 const unsigned pinW_L = 16;
 
+const double sin_120 = 0.866025;
+
 void initialize_pins()
 {
 	const std::vector<unsigned> pins = {
@@ -52,14 +54,25 @@ void run_inverter(int N)
 	double qeU = 0.0;
 	double qeV = 0.0;
 	double qeW = 0.0;
-
 	for (int i = 0; i < N; ++i)
 	{
+		/*
+		Instead of doing three trigonometric calculations, we can use the sine
+		addition formula to need only two trigonometric calculations:
+
+		sin(x + phi) = sin(x)cos(phi) + sin(phi)cos(x)
+
+		Because phi is a constant, we can precompute cos(phi) and sin(phi) so
+		that now we only perform two trigonometric calculations.
+		*/
+
 		double x = 2 * M_PI * i / N;
 
-		double sU = std::sin(x);				// 0 degrees
-		double sV = std::sin(x + 2 * M_PI / 3); // 120 degrees
-		double sW = std::sin(x + 4 * M_PI / 3); // 240 degrees
+		double sU = std::sin(x);
+		double cosX = std::cos(x);
+		double sinAcosB = sU * -0.5;
+		double sV = sinAcosB + sin_120 * cosX;
+		double sW = sinAcosB - sin_120 * cosX;
 
 		qeU += sU;
 		qeV += sV;
