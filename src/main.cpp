@@ -29,6 +29,38 @@ void initialize_pins()
 	}
 }
 
+double calculate_frequency(double velocity)
+{
+	// Take the equation the propulsion subteam provided, substitute the
+	// constants, and simplify. The resulting equation is a quadratic, where
+	// x is the frequency and the velocity is a constant. This means that
+	// we can use the quadratic formula and solve for the appropriate frequency.
+	// Note that since this is a quadratic, there are two solutions. We
+	// default to the solution that has the lower frequency for increased
+	// stability.
+
+	// Run the quadratic formula on these coefficients to solve for
+	// u = ((L*x)/(2*pi)) - v_r and solve for x.
+
+	int N = 183;			   // number of turns per phase
+	int I = 54;				   // RMS current through coil (amps)
+	double D = 0.1;			   // stator thickness (meters)
+	double d_r = 0.01048;	   // track thickness (meters)
+	double L = 0.55;		   // stator length (meters)
+	double sigma = 3.03e7;	   // track conductance/meter (Siemens/meter)
+	double g = 0.02548;		   // air gap between stators (meters)
+	double mu = 1.25663753e-6; // permeability of air (Henries per meter)
+	int F_thrust = 1200;	   // constant thrust (Newtons)
+
+	double cTerm = F_thrust * (M_PI * g / mu) * (M_PI * g / mu);
+	double bCoefficient = -18 * D * d_r * sigma * L * N * N * I * I;
+	double aCoefficient = F_thrust * (sigma * d_r * L / 2) * (sigma * d_r * L / 2);
+
+	double u = (-bCoefficient - std::sqrt(bCoefficient * bCoefficient - 4 * aCoefficient * cTerm)) / (2 * aCoefficient);
+
+	return (u + velocity) * 2 * M_PI / L;
+}
+
 void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
 {
 	gpio_put(pin_H, v);
