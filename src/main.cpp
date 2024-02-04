@@ -11,7 +11,7 @@ const unsigned pinV_L = 18;
 const unsigned pinW_H = 17;
 const unsigned pinW_L = 16;
 
-const double sin_120 = 0.866025;
+const float sin_120 = 0.866025;
 
 void initialize_pins()
 {
@@ -69,10 +69,10 @@ void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
 
 void run_one_inverter(int N)
 {
-	double qe = 0.0;
+	float qe = 0.0;
 	for (int i = 0; i < N; ++i)
 	{
-		double s = std::sin(2 * M_PI * i / N);
+		float s = std::sin(2 * M_PI * i / N);
 		qe += s;
 		bool v = qe > 0;
 		int fix = v ? 1 : -1;
@@ -83,9 +83,9 @@ void run_one_inverter(int N)
 
 void run_inverter(int N)
 {
-	double qeU = 0.0;
-	double qeV = 0.0;
-	double qeW = 0.0;
+	float qeU = 0.0;
+	float qeV = 0.0;
+	float qeW = 0.0;
 	for (int i = 0; i < N; ++i)
 	{
 		/*
@@ -98,13 +98,13 @@ void run_inverter(int N)
 		that now we only perform two trigonometric calculations.
 		*/
 
-		double x = 2 * M_PI * i / N;
+		float x = 2 * M_PI * i / N;
 
-		double sU = std::sin(x);
-		double cosX = std::cos(x);
-		double sinAcosB = sU * -0.5;
-		double sV = sinAcosB + sin_120 * cosX;
-		double sW = sinAcosB - sin_120 * cosX;
+		float sU = std::sin(x);
+		float cosX = std::cos(x);
+		float sinAcosB = sU * -0.5;
+		float sV = sinAcosB + sin_120 * cosX;
+		float sW = sinAcosB - sin_120 * cosX;
 
 		qeU += sU;
 		qeV += sV;
@@ -131,16 +131,16 @@ void run_inverter(int N)
 int main()
 {
 	initialize_pins();
-	int frequency = 2000;
+	int frequency = 1000;
 
 	while (true)
 	{
 		run_inverter(frequency);
 
-		if (time_us_32() % 10000000 > 5000000)
-		{
-			frequency = (frequency == 2000) ? 3000 : 2000;
-		}
+		// if (time_us_32() % 10000000 > 5000000)
+		// {
+		// 	frequency = (frequency == 2000) ? 3000 : 2000;
+		// }
 	}
 
 	return 0;
