@@ -141,6 +141,8 @@ int main()
 		// {
 		// 	frequency = (frequency == 2000) ? 3000 : 2000;
 		// }
+
+		sleep_us(1);
 	}
 
 	return 0;
