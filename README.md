@@ -19,21 +19,14 @@ configuration that expedites the setup process.
 For Windows machines, a convenient installation tool is provided that installs
 all the necessary software for you. See [this article](https://www.raspberrypi.com/news/raspberry-pi-pico-windows-installer/) to download the installer.
 
-#### MacOS
+#### macOS
 
-For MacOS, a manual installation is required. Please make sure that Homebrew, a
-package manager for MacOS, is installed. If not, you can install it by running
-
-```shell
-$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-Then, run the following commands to install the rest of the required software:
+For macOS, CMake and the ARM compiler for the Raspberry Pi Pico can be installed from
+[Homebrew formulae](https://brew.sh).
 
 ```shell
 $ brew install cmake
-$ brew tap ArmMbed/homebrew-formulae
-$ brew install arm-none-eabi-gcc
+$ brew install gcc-arm-embedded
 ```
 
 #### Linux
@@ -95,9 +88,8 @@ Now that everything has been installed, it's time to build the program!
 Specifically, we will generate the UF2 executable that the Pico needs and
 manually copy this file over to the Pico.
 
-If you have the CMake extension installed, you can click "Build" on the
-bottom. The executable files for the Pico, including the UF2, will be
-automatically generated in the `build` directory.
+If you have the CMake extension installed, you can use the **Build** button in the status bar.
+The executable files for the Pico, including the UF2, will be compiled to the `build` directory.
 
 If you'd like to run the commands themselves, you can run the following:
 
@@ -109,9 +101,6 @@ $ make
 
 If errors occur, try restarting your terminal and then running the
 commands again.
-
-**For Windows devices, the `.vscode/` directory should automatically allow
-you to press the Build button that will do the above.**
 
 ## Running the Code
 
