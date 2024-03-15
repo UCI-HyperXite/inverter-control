@@ -63,8 +63,16 @@ float calculate_frequency(float velocity)
 
 void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
 {
-	gpio_put(pin_H, v);
-	gpio_put(pin_L, !v);
+	// Even though we should not need to manually introduce a delay (deadtime),
+	// we should still ensure that the rise always occurs after the fall on the
+	// GPIO pins for each phase.
+	if (v) {
+		gpio_put(pin_L, !v);
+		gpio_put(pin_H, v);
+	} else {
+		gpio_put(pin_H, v);
+		gpio_put(pin_L, !v);
+	}
 }
 
 void run_one_inverter(int N)
