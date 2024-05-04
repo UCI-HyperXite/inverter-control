@@ -4,8 +4,8 @@
 #include <cmath>
 #include <vector>
 
-const unsigned pinU_H = 21;
-const unsigned pinU_L = 20;
+const unsigned pinU_H = 28;
+const unsigned pinU_L = 14;
 
 void initialize_pins()
 {
@@ -51,20 +51,6 @@ float calculate_frequency(float velocity)
 	return (u + velocity) * 2 * M_PI / L;
 }
 
-void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
-{
-	// Even though we should not need to manually introduce a delay (deadtime),
-	// we should still ensure that the rise always occurs after the fall on the
-	// GPIO pins for each phase.
-	if (v) {
-		gpio_put(pin_L, !v);
-		gpio_put(pin_H, v);
-	} else {
-		gpio_put(pin_H, v);
-		gpio_put(pin_L, !v);
-	}
-}
-
 void run_one_inverter(int N)
 {
 	float qe = 0.0;
@@ -75,7 +61,7 @@ void run_one_inverter(int N)
 		bool v = qe > 0;
 		int fix = v ? 1 : -1;
 		qe -= fix;
-		set_inverter_pins_(v, pinU_H, pinU_L);
+		gpio_put(pinU_H, v);
 	}
 }
 
@@ -83,6 +69,8 @@ int main()
 {
 	initialize_pins();
 	int frequency = 1000;
+
+	gpio_put(pinU_L, 1);
 
 	while (true)
 	{
