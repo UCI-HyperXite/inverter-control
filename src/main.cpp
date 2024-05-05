@@ -4,16 +4,19 @@
 #include <cmath>
 #include <vector>
 
-const unsigned pinU_H = 28;
-const unsigned pinU_L = 14;
+const unsigned PIN_LOGIC = 28;
+const unsigned PIN_ENABLE = 14;
+
+const unsigned pin_H = 28;
+const unsigned pin_L = 14;
 
 constexpr bool TEST_CIRCUIT = false;
 
 void initialize_pins()
 {
 	const std::vector<unsigned> pins = {
-		pinU_H,
-		pinU_L};
+		PIN_LOGIC,
+		PIN_ENABLE};
 	for (unsigned pin : pins)
 	{
 		gpio_init(pin);
@@ -54,8 +57,8 @@ float calculate_frequency(float velocity)
 }
 
 void set_logic_pin_(bool v) {
-	gpio_put(pinU_H, v);
-	gpio_put(pinU_L, 1);
+	gpio_put(PIN_LOGIC, v);
+	gpio_put(PIN_ENABLE, 1);
 }
 
 void set_hilo_pins_(bool v)
@@ -64,11 +67,11 @@ void set_hilo_pins_(bool v)
 	// we should still ensure that the rise always occurs after the fall on the
 	// GPIO pins for each phase.
 	if (v) {
-		gpio_put(pinU_L, !v);
-		gpio_put(pinU_H, v);
+		gpio_put(pin_L, !v);
+		gpio_put(pin_H, v);
 	} else {
-		gpio_put(pinU_H, v);
-		gpio_put(pinU_L, !v);
+		gpio_put(pin_H, v);
+		gpio_put(pin_L, !v);
 	}
 }
 
@@ -92,8 +95,6 @@ int main()
 {
 	initialize_pins();
 	int frequency = 1000;
-
-	gpio_put(pinU_L, 1);
 
 	while (true)
 	{
