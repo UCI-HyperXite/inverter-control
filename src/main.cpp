@@ -7,6 +7,8 @@
 const unsigned pinU_H = 28;
 const unsigned pinU_L = 14;
 
+constexpr bool TEST_CIRCUIT = false;
+
 void initialize_pins()
 {
 	const std::vector<unsigned> pins = {
@@ -51,6 +53,27 @@ float calculate_frequency(float velocity)
 	return (u + velocity) * 2 * M_PI / L;
 }
 
+void set_logic_pin_(bool v) {
+	gpio_put(pinU_H, v);
+	gpio_put(pinU_L, 1);
+}
+
+void set_hilo_pins_(bool v)
+{
+	// Even though we should not need to manually introduce a delay (deadtime),
+	// we should still ensure that the rise always occurs after the fall on the
+	// GPIO pins for each phase.
+	if (v) {
+		gpio_put(pinU_L, !v);
+		gpio_put(pinU_H, v);
+	} else {
+		gpio_put(pinU_H, v);
+		gpio_put(pinU_L, !v);
+	}
+}
+
+constexpr void (*set_inverter_pins_)(bool v) = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
+
 void run_one_inverter(int N)
 {
 	float qe = 0.0;
@@ -61,7 +84,7 @@ void run_one_inverter(int N)
 		bool v = qe > 0;
 		int fix = v ? 1 : -1;
 		qe -= fix;
-		gpio_put(pinU_H, v);
+		set_inverter_pins_(v);
 	}
 }
 
