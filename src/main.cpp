@@ -14,9 +14,9 @@ constexpr bool TEST_CIRCUIT = false;
 
 void initialize_pins()
 {
-	const std::vector<unsigned> pins = {
-		PIN_LOGIC,
-		PIN_ENABLE};
+	const std::vector<unsigned> pins = TEST_CIRCUIT ? 
+		std::vector<unsigned>{PIN_LOGIC, PIN_ENABLE} :
+		std::vector<unsigned>{pin_H, pin_L};
 	for (unsigned pin : pins)
 	{
 		gpio_init(pin);
