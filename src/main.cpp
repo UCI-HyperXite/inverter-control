@@ -72,7 +72,7 @@ void set_hilo_pins_(bool v)
 	}
 }
 
-constexpr void (*set_inverter_pins_)(bool v) = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
+constexpr auto& set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
 
 void run_one_inverter(int N)
 {
