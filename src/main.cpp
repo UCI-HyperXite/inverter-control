@@ -4,14 +4,19 @@
 #include <cmath>
 #include <vector>
 
-const unsigned pinU_H = 21;
-const unsigned pinU_L = 20;
+const unsigned PIN_LOGIC = 28;
+const unsigned PIN_ENABLE = 14;
+
+const unsigned pin_H = 28;
+const unsigned pin_L = 14;
+
+constexpr bool TEST_CIRCUIT = false;
 
 void initialize_pins()
 {
-	const std::vector<unsigned> pins = {
-		pinU_H,
-		pinU_L};
+	const std::vector<unsigned> pins = TEST_CIRCUIT ? 
+		std::vector<unsigned>{PIN_LOGIC, PIN_ENABLE} :
+		std::vector<unsigned>{pin_H, pin_L};
 	for (unsigned pin : pins)
 	{
 		gpio_init(pin);
@@ -51,7 +56,12 @@ float calculate_frequency(float velocity)
 	return (u + velocity) * 2 * M_PI / L;
 }
 
-void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
+void set_logic_pin_(bool v) {
+	gpio_put(PIN_LOGIC, v);
+	gpio_put(PIN_ENABLE, 1);
+}
+
+void set_hilo_pins_(bool v)
 {
 	// Even though we should not need to manually introduce a delay (deadtime),
 	// we should still ensure that the rise always occurs after the fall on the
@@ -65,6 +75,8 @@ void set_inverter_pins_(bool v, unsigned pin_H, unsigned pin_L)
 	}
 }
 
+constexpr auto& set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
+
 void run_one_inverter(int N)
 {
 	float qe = 0.0;
@@ -75,7 +87,7 @@ void run_one_inverter(int N)
 		bool v = qe > 0;
 		int fix = v ? 1 : -1;
 		qe -= fix;
-		set_inverter_pins_(v, pinU_H, pinU_L);
+		set_inverter_pins_(v);
 	}
 }
 
