@@ -77,12 +77,12 @@ void set_hilo_pins_(bool v)
 
 constexpr auto& set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
 
-void run_one_inverter(int N)
+void run_inverter_cycle(int N, float amplitude)
 {
 	float qe = 0.0;
 	for (int i = 0; i < N; ++i)
 	{
-		float s = std::sin(2 * M_PI * i / N);
+		float s = amplitude * std::sin(2 * M_PI * i / N);
 		qe += s;
 		bool v = qe > 0;
 		int fix = v ? 1 : -1;
@@ -98,12 +98,7 @@ int main()
 
 	while (true)
 	{
-		run_one_inverter(frequency);
-
-		// if (time_us_32() % 10000000 > 5000000)
-		// {
-		// 	frequency = (frequency == 2000) ? 3000 : 2000;
-		// }
+		run_inverter_cycle(frequency, 1);
 	}
 
 	return 0;
