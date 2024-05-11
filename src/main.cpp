@@ -10,6 +10,9 @@ const unsigned PIN_ENABLE = 14;
 const unsigned pin_H = 28;
 const unsigned pin_L = 14;
 
+const float OPERATING_FREQUENCY = 45552.3;
+const float OFFSET = 0.0411;
+
 constexpr bool TEST_CIRCUIT = false;
 
 void initialize_pins()
@@ -91,14 +94,23 @@ void run_inverter_cycle(int N, float amplitude)
 	}
 }
 
+int frequency_to_samples(float frequency) {
+	return OPERATING_FREQUENCY / frequency - OFFSET;
+}
+
+float get_frequency() {
+	return 1;
+}	
+
 int main()
 {
 	initialize_pins();
-	int frequency = 1000;
 
 	while (true)
 	{
-		run_inverter_cycle(frequency, 1);
+		float frequency = get_frequency();
+		int N = frequency_to_samples(frequency);
+		run_inverter_cycle(N, 1);
 	}
 
 	return 0;
