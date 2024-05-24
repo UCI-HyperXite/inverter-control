@@ -29,11 +29,12 @@ void initialize_pins()
 
 float calculate_frequency(float velocity, float throttle)
 {
-	float d_r = 0.01048;		  // track thickness (meters)
-	float L = 0.55;			  // stator length (meters)
-	float sigma = 3.03e7;	  // track conductance/meter (Siemens/meter)
-	float g = 0.02548;		  // air gap between stators (meters)
-	float mu = 1.25663753e-6; // permeability of air (Henries per meter)
+	float d_r = 0.01048;     // track thickness (meters)
+	float L = 0.55;          // stator length (meters)
+	float sigma = 3.03e7;    // track conductance/length (Siemens/meter)
+	float g = 0.0305;        // air gap between stators (meters)
+	float mu_r = 1.00000037; // relative permeability of air
+
 
 	// The thrust equation has the form F = Bs / (C + As^2)
 	// which has a peak value at s = √(C/A)
@@ -41,9 +42,10 @@ float calculate_frequency(float velocity, float throttle)
 	// and A is the square of the length resistance,
 	// so the peak is found by simply dividing the two.
 
-	float magnetic_sensitivity = M_PI * g / mu;	  // amps/tesla
-	float length_resistance = sigma * d_r * L / 2; // meters/ohm
-	float peakThrustSlip = magnetic_sensitivity / length_resistance;
+	// Derived from C = πg/µ using µ_0 = 4πe-7
+	float magneticSensitivity = 1e7 * g / (4 * mu_r); // amps/tesla
+	float lengthResistance = sigma * d_r * L / 2;     // meters/ohm
+	float peakThrustSlip = magneticSensitivity / lengthResistance;
 
 	// To provide a proportional throttle, the peak is remapped to 1,
 	// and the normalized inverse profile for the stable region is (1 - √(1 - u^2)) / u
