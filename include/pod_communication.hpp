@@ -3,8 +3,8 @@
 
 struct LimControlMessage
 {
-    float velocity;
-    float throttle;
+	float velocity;
+	float throttle;
 };
 
 LimControlMessage read_control_message();

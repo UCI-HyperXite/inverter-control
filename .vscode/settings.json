@@ -22,5 +22,12 @@
     "CMAKE_MODULE_PATH": "${env:PICO_INSTALL_PATH}/pico-sdk-tools"
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-  "C_Cpp.autoAddFileAssociations": false
+  "C_Cpp.autoAddFileAssociations": false,
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.type": "newLine",
+  "C_Cpp.formatting": "vcFormat",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "newLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "newLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.lambda": "newLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.namespace": "newLine",
+  "C_Cpp.vcFormat.indent.accessSpecifiers": false
 }
