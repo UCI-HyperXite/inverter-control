@@ -4,6 +4,10 @@ cmake_minimum_required(VERSION 3.13)
 # Include build functions from Pico SDK
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
+include_directories(include/)
+file(GLOB SOURCE "src/*.cpp")
+file(GLOB HEADER "include/*.hpp")
+
 # Set name of project (as PROJECT_NAME) and C/C   standards
 project(inverter-control C CXX ASM)
 set(CMAKE_C_STANDARD 11)
@@ -14,6 +18,8 @@ pico_sdk_init()
 
 # Tell CMake where to find the executable source file
 add_executable(${PROJECT_NAME} 
+    ${HEADER}
+    ${SOURCE}
     src/main.cpp
 )
 

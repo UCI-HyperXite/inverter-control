@@ -1,8 +1,16 @@
+#include <cmath>
+#include <iostream>
+#include <vector>
+
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 
 #include <cmath>
+#include <iostream>
 #include <vector>
+#include "tusb.h"
+
+#include "pod_communication.hpp"
 
 const unsigned PIN_LOGIC = 28;
 const unsigned PIN_ENABLE = 14;
@@ -17,9 +25,7 @@ constexpr bool TEST_CIRCUIT = false;
 
 void initialize_pins()
 {
-	const std::vector<unsigned> pins = TEST_CIRCUIT ? 
-		std::vector<unsigned>{PIN_LOGIC, PIN_ENABLE} :
-		std::vector<unsigned>{pin_H, pin_L};
+	const std::vector<unsigned> pins = TEST_CIRCUIT ? std::vector<unsigned>{PIN_LOGIC, PIN_ENABLE} : std::vector<unsigned>{pin_H, pin_L};
 	for (unsigned pin : pins)
 	{
 		gpio_init(pin);
@@ -29,12 +35,11 @@ void initialize_pins()
 
 float calculate_frequency(float velocity, float throttle)
 {
-	float d_r = 0.01048;     // track thickness (meters)
-	float L = 0.55;          // stator length (meters)
-	float sigma = 3.03e7;    // track conductance/length (Siemens/meter)
-	float g = 0.0305;        // air gap between stators (meters)
+	float d_r = 0.01048;	 // track thickness (meters)
+	float L = 0.55;			 // stator length (meters)
+	float sigma = 3.03e7;	 // track conductance/length (Siemens/meter)
+	float g = 0.0305;		 // air gap between stators (meters)
 	float mu_r = 1.00000037; // relative permeability of air
-
 
 	// The thrust equation has the form F = Bs / (C + As^2)
 	// which has a peak value at s = √(C/A)
@@ -44,7 +49,7 @@ float calculate_frequency(float velocity, float throttle)
 
 	// Derived from C = πg/µ using µ_0 = 4πe-7
 	float magneticSensitivity = 1e7 * g / (4 * mu_r); // amps/tesla
-	float lengthResistance = sigma * d_r * L / 2;     // meters/ohm
+	float lengthResistance = sigma * d_r * L / 2;	  // meters/ohm
 	float peakThrustSlip = magneticSensitivity / lengthResistance;
 
 	// To provide a proportional throttle, the peak is remapped to 1,
@@ -56,7 +61,8 @@ float calculate_frequency(float velocity, float throttle)
 	return (slip + velocity) * 2 * M_PI / L;
 }
 
-void set_logic_pin_(bool v) {
+void set_logic_pin_(bool v)
+{
 	gpio_put(PIN_LOGIC, v);
 	gpio_put(PIN_ENABLE, 1);
 }
@@ -66,16 +72,19 @@ void set_hilo_pins_(bool v)
 	// Even though we should not need to manually introduce a delay (deadtime),
 	// we should still ensure that the rise always occurs after the fall on the
 	// GPIO pins for each phase.
-	if (v) {
+	if (v)
+	{
 		gpio_put(pin_L, !v);
 		gpio_put(pin_H, v);
-	} else {
+	}
+	else
+	{
 		gpio_put(pin_H, v);
 		gpio_put(pin_L, !v);
 	}
 }
 
-constexpr auto& set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
+constexpr auto &set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
 
 void run_inverter_cycle(int N, float amplitude)
 {
@@ -91,21 +100,25 @@ void run_inverter_cycle(int N, float amplitude)
 	}
 }
 
-int frequency_to_samples(float frequency) {
+int frequency_to_samples(float frequency)
+{
 	return OPERATING_FREQUENCY / frequency - OFFSET;
 }
 
-float get_frequency() {
-	return 1;
-}	
-
 int main()
 {
+	stdio_init_all();
+
+	while (!tud_cdc_connected())
+		sleep_ms(250);
+
 	initialize_pins();
 
 	while (true)
 	{
-		float frequency = get_frequency();
+		std::cout << "Test print" << std::endl;
+		LimControlMessage message = read_control_message();
+		float frequency = calculate_frequency(message.velocity, message.throttle);
 		int N = frequency_to_samples(frequency);
 		run_inverter_cycle(N, 1);
 	}
