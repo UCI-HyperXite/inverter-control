@@ -27,36 +27,33 @@ void initialize_pins()
 	}
 }
 
-float calculate_frequency(float velocity)
+float calculate_frequency(float velocity, float throttle)
 {
-	// Take the equation the propulsion subteam provided, substitute the
-	// constants, and simplify. The resulting equation is a quadratic, where
-	// x is the frequency and the velocity is a constant. This means that
-	// we can use the quadratic formula and solve for the appropriate frequency.
-	// Note that since this is a quadratic, there are two solutions. We
-	// default to the solution that has the lower frequency for increased
-	// stability.
+	float d_r = 0.01048;     // track thickness (meters)
+	float L = 0.55;          // stator length (meters)
+	float sigma = 3.03e7;    // track conductance/length (Siemens/meter)
+	float g = 0.0305;        // air gap between stators (meters)
+	float mu_r = 1.00000037; // relative permeability of air
 
-	// Run the quadratic formula on these coefficients to solve for
-	// u = ((L*x)/(2*pi)) - v_r and solve for x.
 
-	int N = 183;			  // number of turns per phase
-	int I = 54;				  // RMS current through coil (amps)
-	float D = 0.1;			  // stator thickness (meters)
-	float d_r = 0.01048;	  // track thickness (meters)
-	float L = 0.55;			  // stator length (meters)
-	float sigma = 3.03e7;	  // track conductance/meter (Siemens/meter)
-	float g = 0.02548;		  // air gap between stators (meters)
-	float mu = 1.25663753e-6; // permeability of air (Henries per meter)
-	int F_thrust = 1200;	  // constant thrust (Newtons)
+	// The thrust equation has the form F = Bs / (C + As^2)
+	// which has a peak value at s = √(C/A)
+	// where C is the square of the magnetic sensitivity
+	// and A is the square of the length resistance,
+	// so the peak is found by simply dividing the two.
 
-	float cTerm = F_thrust * (M_PI * g / mu) * (M_PI * g / mu);
-	float bCoefficient = -18 * D * d_r * sigma * L * N * N * I * I;
-	float aCoefficient = F_thrust * (sigma * d_r * L / 2) * (sigma * d_r * L / 2);
+	// Derived from C = πg/µ using µ_0 = 4πe-7
+	float magneticSensitivity = 1e7 * g / (4 * mu_r); // amps/tesla
+	float lengthResistance = sigma * d_r * L / 2;     // meters/ohm
+	float peakThrustSlip = magneticSensitivity / lengthResistance;
 
-	float u = (-bCoefficient - std::sqrt(bCoefficient * bCoefficient - 4 * aCoefficient * cTerm)) / (2 * aCoefficient);
+	// To provide a proportional throttle, the peak is remapped to 1,
+	// and the normalized inverse profile for the stable region is (1 - √(1 - u^2)) / u
+	// The denominator is irrationalized to avoid division by zero.
+	float proportion = throttle / (1 + std::sqrt(1 - throttle * throttle));
+	float slip = proportion * peakThrustSlip;
 
-	return (u + velocity) * 2 * M_PI / L;
+	return (slip + velocity) * 2 * M_PI / L;
 }
 
 void set_logic_pin_(bool v) {
