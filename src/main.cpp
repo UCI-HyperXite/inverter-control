@@ -90,7 +90,20 @@ void set_hilo_pins_(bool v)
 	}
 }
 
+void set_logic_off_()
+{
+	gpio_put(PIN_LOGIC, 0);
+	gpio_put(PIN_ENABLE, 0);
+}
+
+void set_hilo_pins_off_()
+{
+	gpio_put(pin_H, 0);
+	gpio_put(pin_L, 0);
+}
+
 constexpr auto& set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
+constexpr auto& set_inverter_off_ = TEST_CIRCUIT ? set_logic_off_ : set_hilo_pins_off_;
 
 void run_inverter_cycle(int N, float amplitude)
 {
@@ -135,6 +148,11 @@ void run_inverter()
 		mutex_exit(&lcmMutex);
 
 		// TODO: disregard zero frequency
+		if (frequency == 0)
+		{
+			set_inverter_off_();
+			continue;
+		}
 
 		int N = frequency_to_samples(frequency);
 		// TODO: amplitude ratio
