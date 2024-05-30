@@ -3,7 +3,7 @@
 
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
-#include "pico/sync.h"
+#include "pico/mutex.h"
 #include "hardware/gpio.h"
 #include "tusb.h"
 
