@@ -2,6 +2,8 @@
 #include <vector>
 
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
+#include "pico/sync.h"
 #include "hardware/gpio.h"
 #include "tusb.h"
 
@@ -17,6 +19,9 @@ const float OPERATING_FREQUENCY = 45552.3;
 const float OFFSET = 0.0411;
 
 constexpr bool TEST_CIRCUIT = false;
+
+static mutex m;
+volatile static LimControlMessage lcm{ 0, 1 };
 
 void initialize_pins()
 {
@@ -103,6 +108,21 @@ int frequency_to_samples(float frequency)
 	return OPERATING_FREQUENCY / frequency - OFFSET;
 }
 
+void monitor_serial()
+{
+	while (true)
+	{
+		LimControlMessage message = read_control_message();
+
+		mutex_enter_blocking(&m);
+
+		lcm.velocity = message.velocity;
+		lcm.throttle = message.throttle;
+
+		mutex_exit(&m);
+	}
+}
+
 int main()
 {
 	stdio_init_all();
@@ -113,10 +133,16 @@ int main()
 
 	initialize_pins();
 
+	mutex_init(&m);
+
+	multicore_launch_core1(monitor_serial);
+
 	while (true)
 	{
-		LimControlMessage message = read_control_message();
-		float frequency = calculate_frequency(message.velocity, message.throttle);
+		mutex_enter_blocking(&m);
+		float frequency = calculate_frequency(lcm.velocity, lcm.throttle);
+		mutex_exit(&m);
+
 		int N = frequency_to_samples(frequency);
 		run_inverter_cycle(N, 1);
 	}
