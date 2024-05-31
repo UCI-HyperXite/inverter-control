@@ -1,43 +1,20 @@
 #include <cmath>
-#include <vector>
 
-#include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "pico/mutex.h"
 #include "hardware/gpio.h"
 #include "tusb.h"
 
+#include "pin_logic.hpp"
 #include "pod_communication.hpp"
-
-const unsigned PIN_LOGIC = 28;
-const unsigned PIN_ENABLE = 14;
-
-const unsigned pin_H = 28;
-const unsigned pin_L = 14;
 
 const float OPERATING_FREQUENCY = 45552.3;
 const float OFFSET = 0.0411;
-
-constexpr bool TEST_CIRCUIT = false;
 
 // Value will be changed by other core, so prevent compiler from optimizing as constant
 volatile static LimControlMessage lcm{ 0, 1 };
 // Allow only one core at a time to access lcm
 static mutex lcmMutex;
-
-
-void initialize_pins()
-{
-	const std::vector<unsigned> pins = TEST_CIRCUIT ?
-		std::vector<unsigned>{PIN_LOGIC, PIN_ENABLE} :
-		std::vector<unsigned>{ pin_H, pin_L };
-
-	for (unsigned pin : pins)
-	{
-		gpio_init(pin);
-		gpio_set_dir(pin, GPIO_OUT);
-	}
-}
 
 float calculate_frequency(float velocity, float throttle)
 {
@@ -66,31 +43,6 @@ float calculate_frequency(float velocity, float throttle)
 
 	return (slip + velocity) * 2 * M_PI / L;
 }
-
-void set_logic_pin_(bool v)
-{
-	gpio_put(PIN_LOGIC, v);
-	gpio_put(PIN_ENABLE, 1);
-}
-
-void set_hilo_pins_(bool v)
-{
-	// Even though we should not need to manually introduce a delay (deadtime),
-	// we should still ensure that the rise always occurs after the fall on the
-	// GPIO pins for each phase.
-	if (v)
-	{
-		gpio_put(pin_L, !v);
-		gpio_put(pin_H, v);
-	}
-	else
-	{
-		gpio_put(pin_H, v);
-		gpio_put(pin_L, !v);
-	}
-}
-
-constexpr auto& set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
 
 void run_inverter_cycle(int N, float amplitude)
 {
@@ -134,7 +86,12 @@ void run_inverter()
 		float frequency = calculate_frequency(lcm.velocity, lcm.throttle);
 		mutex_exit(&lcmMutex);
 
-		// TODO: disregard zero frequency
+		// Set pins to low if frequency is zero
+		if (frequency == 0)
+		{
+			set_inverter_off_();
+			continue;
+		}
 
 		int N = frequency_to_samples(frequency);
 		// TODO: amplitude ratio
