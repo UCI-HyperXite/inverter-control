@@ -11,8 +11,10 @@
 const float OPERATING_FREQUENCY = 45552.3;
 const float OFFSET = 0.0411;
 
-// Value will be changed by other core, so prevent compiler from optimizing as constant
-volatile static LimControlMessage lcm{ 0, 1 };
+const unsigned EXPIRATION_TIME = 28; // milliseconds
+
+// Value may need to be volatile?
+static LimControlMessage lcm{ 0, 1, get_absolute_time() };
 // Allow only one core at a time to access lcm
 static mutex lcmMutex;
 
@@ -71,8 +73,7 @@ void monitor_serial()
 		LimControlMessage message = read_control_message();
 
 		mutex_enter_blocking(&lcmMutex);
-		lcm.velocity = message.velocity;
-		lcm.throttle = message.throttle;
+		lcm = message;
 		mutex_exit(&lcmMutex);
 	}
 }
@@ -83,7 +84,14 @@ void run_inverter()
 	while (true)
 	{
 		mutex_enter_blocking(&lcmMutex);
-		float frequency = calculate_frequency(lcm.velocity, lcm.throttle);
+
+		// Calculate time difference in microseconds and check if the difference is
+		// greater than the expiration time. If so, set frequency to 0. Otherwise,
+		// set frequency to the data received.
+		int64_t timeDiff = absolute_time_diff_us(lcm.messageTime, get_absolute_time());
+		bool hasExpired = timeDiff > EXPIRATION_TIME * 1000;
+		float frequency = hasExpired ? 0 : calculate_frequency(lcm.velocity, lcm.throttle);
+
 		mutex_exit(&lcmMutex);
 
 		// Set pins to low if frequency is zero

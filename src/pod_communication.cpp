@@ -7,8 +7,5 @@ LimControlMessage read_control_message()
 	float throttle;
 	std::cin >> velocity >> throttle;
 
-	std::cout << "Received velocity: " << velocity << std::endl;
-	std::cout << "Received throttle: " << throttle << std::endl;
-
-	return { velocity, throttle };
+	return { velocity, throttle, get_absolute_time() };
 }
