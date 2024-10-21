@@ -1,11 +1,11 @@
 #ifndef PIN_LOGIC_HPP
 #define PIN_LOGIC_HPP
 
-const unsigned PIN_LOGIC = 28;
-const unsigned PIN_ENABLE = 14;
+const unsigned PIN_LOGIC = 14;
+const unsigned PIN_ENABLE = 2;
 
-const unsigned pin_H = 28;
-const unsigned pin_L = 14;
+const unsigned pin_H = 14;
+const unsigned pin_L = 2;
 
 constexpr bool TEST_CIRCUIT = false;
 
