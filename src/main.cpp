@@ -101,19 +101,30 @@ void run_inverter()
 
 int main()
 {
-	stdio_init_all();
+    stdio_init_all();
 
-	// Wait until USB device is connected
-	while (!tud_cdc_connected())
-		sleep_ms(250);
+    const int max_attempts = 80; // max number of attempts, 40 * 250ms = 20 sec 
+    int attempts = 0;
 
-	initialize_pins();
+    while (!tud_cdc_connected() && attempts < max_attempts)
+    {
+        sleep_ms(250); 
+        attempts++;
+    }
 
-	mutex_init(&lcmMutex);
+    if (tud_cdc_connected()) 
+    {
+        // USB connected, launch monitor_serial on core 1
+        multicore_launch_core1(monitor_serial);
+    }
 
-	// Run inverter on core 0 while updating control parameters on core 1
-	multicore_launch_core1(monitor_serial);
-	run_inverter();
+    // Proceed with init`ialization and inverter operation regardless of USB status
+    initialize_pins();
+    mutex_init(&lcmMutex);
 
-	return 0;
+    // Run inverter on core 0
+    run_inverter();
+
+    return 0;
 }
+
