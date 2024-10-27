@@ -18,53 +18,54 @@ static mutex lcmMutex;
 
 float calculate_frequency(float velocity, float throttle)
 {
-	float d_r = 0.01048;     // track thickness (meters)
-	float L = 0.55;          // stator length (meters)
-	float sigma = 3.03e7;    // track conductance/length (Siemens/meter)
-	float g = 0.0305;        // air gap between stators (meters)
-	float mu_r = 1.00000037; // relative permeability of air
+    float d_r = 0.01048;     // track thickness (meters)
+    float L = 0.55;          // stator length (meters)
+    float sigma = 3.03e7;    // track conductance/length (Siemens/meter)
+    float g = 0.0305;        // air gap between stators (meters)
+    float mu_r = 1.00000037; // relative permeability of air
 
-	// The thrust equation has the form F = Bs / (C + As^2)
-	// which has a peak value at s = √(C/A)
-	// where C is the square of the magnetic sensitivity
-	// and A is the square of the length resistance,
-	// so the peak is found by simply dividing the two.
+    // Derived from C = πg/µ using µ_0 = 4πe-7
+    float magneticSensitivity = 1e7 * g / (4 * mu_r); // amps/tesla
+    float lengthResistance = sigma * d_r * L / 2;     // meters/ohm
+    float peakThrustSlip = magneticSensitivity / lengthResistance;
 
-	// Derived from C = πg/µ using µ_0 = 4πe-7
-	float magneticSensitivity = 1e7 * g / (4 * mu_r); // amps/tesla
-	float lengthResistance = sigma * d_r * L / 2;     // meters/ohm
-	float peakThrustSlip = magneticSensitivity / lengthResistance;
+    // Proportional throttle for slip calculation
+    float proportion = throttle / (1 + std::sqrt(1 - throttle * throttle));
+    float slip = proportion * peakThrustSlip;
 
-	// To provide a proportional throttle, the peak is remapped to 1,
-	// and the normalized inverse profile for the stable region is (1 - √(1 - u^2)) / u
-	// The denominator is irrationalized to avoid division by zero.
-	float proportion = throttle / (1 + std::sqrt(1 - throttle * throttle));
-	float slip = proportion * peakThrustSlip;
-
-	return (slip + velocity) * 2 * M_PI / L;
+    return (slip + velocity) * 2 * M_PI / L; // calculates angular freq (rad/sec)
 }
 
+// Function to run 1 inverter cycle for all 3 phases
 void run_inverter_cycle(int N, float amplitude)
 {
-    float qe_B = 0.0; // cumulative quantization error for Phase B
+    float qe_A = 0.0, qe_B = 0.0, qe_C = 0.0; // cumulative quantization errors, per phase 
     float threshold = 0.0; // threshold to enforce 50% duty cycle
 
     for (int i = 0; i < N; ++i)
     {
-        // Generate the SPDM waveform with a 120-degree phase shift
-        float s_B = amplitude * std::sin(2 * M_PI * i / N - 2 * M_PI / 3); // 120 degrees phase shift
+        // Generate SPDM waveform values for all three phases
+        float s_A = amplitude * std::sin(2 * M_PI * i / N);                // Phase A: 0 degrees
+        float s_B = amplitude * std::sin(2 * M_PI * i / N - 2 * M_PI / 3); // Phase B: 120 degrees shift
+        float s_C = amplitude * std::sin(2 * M_PI * i / N + 2 * M_PI / 3); // Phase C: 240 degrees shift
 
-        // Update quantization error
+        // Update quantization errors for each phase
+        qe_A += s_A;
         qe_B += s_B;
+        qe_C += s_C;
 
-        // Set the pin high if quantization error is greater than the threshold
+        // Set the pins high or low based on quantization errors
+        bool v_A = qe_A > threshold;
         bool v_B = qe_B > threshold;
+        bool v_C = qe_C > threshold;
 
-        // Adjust quantization error accordingly
+        // Adjust quantization errors accordingly
+        qe_A -= v_A ? 1 : -1;
         qe_B -= v_B ? 1 : -1;
+        qe_C -= v_C ? 1 : -1;
 
-        // Set inverter pins for Phase B
-        set_inverter_pins_(v_B);
+        // Set inverter pins for all 3 phases
+        set_inverter_pins_3phase(v_A, v_B, v_C);
     }
 }
 
