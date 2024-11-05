@@ -1,54 +1,57 @@
 #include "pin_logic.hpp"
-
+#include "hardware/gpio.h"  // Ensure the GPIO library is included
 #include <vector>
 
-#include "pico/stdlib.h"
+// Initialize all GPIO pins for the three phases
+void initialize_pins() {
+    const std::vector<unsigned> pins = {
+        PHASE_A_PIN_H, PHASE_A_PIN_L,
+        PHASE_B_PIN_H, PHASE_B_PIN_L,
+        PHASE_C_PIN_H, PHASE_C_PIN_L
+    };
 
-
-void initialize_pins()
-{
-	const std::vector<unsigned> pins = TEST_CIRCUIT ?
-		std::vector<unsigned>{PIN_LOGIC, PIN_ENABLE} :
-		std::vector<unsigned>{ pin_H, pin_L };
-
-	for (unsigned pin : pins)
-	{
-		gpio_init(pin);
-		gpio_set_dir(pin, GPIO_OUT);
-	}
+    for (unsigned pin : pins) {
+        gpio_init(pin);
+        gpio_set_dir(pin, GPIO_OUT);
+    }
 }
 
-void set_logic_pin_(bool v)
-{
-	gpio_put(PIN_LOGIC, v);
-	gpio_put(PIN_ENABLE, 1);
+// Set the high and low states of each phase’s GPIO pins
+void set_inverter_pins_(bool v_A, bool v_B, bool v_C) {
+    // Control Phase A
+    if (v_A) {
+        gpio_put(PHASE_A_PIN_L, 0);  // Ensure the low pin is off first
+        gpio_put(PHASE_A_PIN_H, 1);  // Set the high pin
+    } else {
+        gpio_put(PHASE_A_PIN_H, 0);  // Turn off the high pin
+        gpio_put(PHASE_A_PIN_L, 1);  // Set the low pin
+    }
+
+    // Control Phase B
+    if (v_B) {
+        gpio_put(PHASE_B_PIN_L, 0);
+        gpio_put(PHASE_B_PIN_H, 1);
+    } else {
+        gpio_put(PHASE_B_PIN_H, 0);
+        gpio_put(PHASE_B_PIN_L, 1);
+    }
+
+    // Control Phase C
+    if (v_C) {
+        gpio_put(PHASE_C_PIN_L, 0);
+        gpio_put(PHASE_C_PIN_H, 1);
+    } else {
+        gpio_put(PHASE_C_PIN_H, 0);
+        gpio_put(PHASE_C_PIN_L, 1);
+    }
 }
 
-void set_hilo_pins_(bool v)
-{
-	// Even though we should not need to manually introduce a delay (deadtime),
-	// we should still ensure that the rise always occurs after the fall on the
-	// GPIO pins for each phase.
-	if (v)
-	{
-		gpio_put(pin_L, !v);
-		gpio_put(pin_H, v);
-	}
-	else
-	{
-		gpio_put(pin_H, v);
-		gpio_put(pin_L, !v);
-	}
-}
-
-void set_logic_off_()
-{
-	gpio_put(PIN_LOGIC, 0);
-	gpio_put(PIN_ENABLE, 0);
-}
-
-void set_hilo_pins_off_()
-{
-	gpio_put(pin_H, 0);
-	gpio_put(pin_L, 0);
+// Turn off all GPIO pins for the three phases
+void set_inverter_off_() {
+    gpio_put(PHASE_A_PIN_H, 0);
+    gpio_put(PHASE_A_PIN_L, 0);
+    gpio_put(PHASE_B_PIN_H, 0);
+    gpio_put(PHASE_B_PIN_L, 0);
+    gpio_put(PHASE_C_PIN_H, 0);
+    gpio_put(PHASE_C_PIN_L, 0);
 }
