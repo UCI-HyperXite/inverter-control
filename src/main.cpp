@@ -47,7 +47,7 @@ float calculate_frequency(float velocity, float throttle) {
 // Generate one inverter cycle for all three phases
 void run_inverter_cycle(int N, float amplitude) {
     float qe_A = 0.0, qe_B = 0.0, qe_C = 0.0; // Cumulative quantization errors
-    float threshold = 0.0; // Threshold for 50% duty cycle
+    float threshold = 0.5; // EXPERIMENT W/ THRESHOLD FOR CLEANER SIGNAL?? 
 
     for (int i = 0; i < N; ++i) {
         // Calculate SPDM waveform values for each phase
@@ -60,15 +60,15 @@ void run_inverter_cycle(int N, float amplitude) {
         qe_B += s_B;
         qe_C += s_C;
 
-        // Set pins high or low based on quantization errors
+        // Set pins high or low based on quantization errors and threshold
         bool v_A = qe_A > threshold;
         bool v_B = qe_B > threshold;
         bool v_C = qe_C > threshold;
 
-        // Adjust quantization errors based on pin states
-        qe_A -= v_A ? 1 : -1;
-        qe_B -= v_B ? 1 : -1;
-        qe_C -= v_C ? 1 : -1;
+        // Adjust quantization errors with a smaller step for stability
+        qe_A -= v_A ? 0.5 : -0.5;
+        qe_B -= v_B ? 0.5 : -0.5;
+        qe_C -= v_C ? 0.5 : -0.5;
 
         // Set inverter pins for all 3 phases
         set_inverter_pins_(v_A, v_B, v_C);
