@@ -1,23 +1,25 @@
 #ifndef PIN_LOGIC_HPP
 #define PIN_LOGIC_HPP
 
-const unsigned PIN_LOGIC = 28;
-const unsigned PIN_ENABLE = 14;
+#include "pico/stdlib.h"
 
-const unsigned pin_H = 28;
-const unsigned pin_L = 14;
+// GPIO pin assignments for each phase
+// PHASE_X_PIN_H: High-side pin for Phase X
+// PHASE_X_PIN_L: Low-side pin for Phase X
+const unsigned PHASE_A_PIN_H = 28;
+const unsigned PHASE_A_PIN_L = 14;
+const unsigned PHASE_B_PIN_H = 27;
+const unsigned PHASE_B_PIN_L = 13;
+const unsigned PHASE_C_PIN_H = 26;
+const unsigned PHASE_C_PIN_L = 12;
 
-constexpr bool TEST_CIRCUIT = false;
-
+// Iinitialize all GPIO pins for three-phase SPDM signals
 void initialize_pins();
 
-void set_logic_pin_(bool v);
-void set_hilo_pins_(bool v);
+// Set the high and low states of each phase’s GPIO pins (true for high, false for low): 
+void set_inverter_pins_(bool v_A, bool v_B, bool v_C);
 
-void set_logic_off_();
-void set_hilo_pins_off_();
-
-static constexpr auto& set_inverter_pins_ = TEST_CIRCUIT ? set_logic_pin_ : set_hilo_pins_;
-static constexpr auto& set_inverter_off_ = TEST_CIRCUIT ? set_logic_off_ : set_hilo_pins_off_;
+// Disable the inverter by setting all GPIO outputs to low
+void set_inverter_off_();
 
 #endif
