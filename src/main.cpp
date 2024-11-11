@@ -11,66 +11,70 @@
 const float OPERATING_FREQUENCY = 45552.3;
 const float OFFSET = 0.0411;
 
-// Shared structure for velocity and throttle, modified by another core
+// Feature flag for indefinite forward motion until peak thrust
+const bool INFINITE_FORWARD_MODE = true; 
+
+// Constants for thrust equation
+const float N = 110;                // Coil turns/phase
+const float I = 20.0;               // RMS current in A
+const float D = 0.1;                // Stator thickness in m
+
+const float d_r = 0.01048;          // Track thickness in m
+const float L = 0.55;               // Stator length in m
+const float sigma = 3.03e7;         // Track conductance per meter in S/m
+const float g = 0.0305;             // Air gap between stators in m
+const float mu = 4 * M_PI * 1e-7;   // Permeability of air in H/m
+
+// Pod values
+const float pod_mass = 160.0;    // Define pod mass in kg
+const float delta_t = 0.25;  // Time step in seconds for velocity update
+const float target_slip = 0.7; // Slip at peak thrust
+
+// Shared structure for velocity; modified by another core
 volatile static LimControlMessage lcm{ 0, 1 };
-// Mutex to ensure only one core accesses lcm at a time
-static mutex lcmMutex;
+static mutex lcmMutex;  // Mutex to ensure only one core accesses lcm at a time
 
-float calculate_frequency(float velocity, float throttle) {
-    float d_r = 0.01048;     // Track thickness (meters)
-    float L = 0.55;          // Stator length (meters)
-    float sigma = 3.03e7;    // Track conductance per length (Siemens/meter)
-    float g = 0.0305;        // Air gap between stators (meters)
-    float mu_r = 1.00000037; // Relative permeability of air
+// Calculate thrust based on the universal thrust equation
+float calculate_thrust(float omega, float velocity) {
+    float vs = L * omega / (2 * M_PI);  // Synchronous speed
+    float slip_velocity = vs - velocity;
 
-    // The thrust equation has the form F = Bs / (C + As^2)
-    // which has a peak value at s = √(C/A)
-    // where C is the square of the magnetic sensitivity
-    // and A is the square of the length resistance,
-    // so the peak is found by simply dividing the two.
+    // Thrust equation 
+    float numerator = 18 * D * d_r * sigma * L * N * N * I * I * slip_velocity;
+    float denominator = std::pow((M_PI * g / mu), 2) + std::pow(slip_velocity * sigma * d_r * L / 2, 2);
 
-    float magneticSensitivity = 1e7 * g / (4 * mu_r); // Amps per Tesla
-    float lengthResistance = sigma * d_r * L / 2;     // Meters per ohm
-    float peakThrustSlip = magneticSensitivity / lengthResistance;
-
-    // To provide a proportional throttle, the peak is remapped to 1,
-    // and the normalized inverse profile for the stable region is (1 - √(1 - u^2)) / u
-    // The denominator is irrationalized to avoid division by zero.
-
-    // Calculate slip based on throttle
-    float proportion = throttle / (1 + std::sqrt(1 - throttle * throttle));
-    float slip = proportion * peakThrustSlip;
-
-    return (slip + velocity) * 2 * M_PI / L; // Angular frequency in rad/sec
+    return numerator / denominator;
 }
 
-// Generate one inverter cycle for all three phases
+// Calculate angular frequency based on velocity and slip
+float calculate_frequency(float velocity, float slip) {
+    if (slip <= 0 || slip >= 1) slip = target_slip;  // Bounds checking for slip value
+    float vs = velocity / (1 - slip);  // Synch speed 
+    return (2 * M_PI * vs) / L;        
+}
+
+// Generate one inverter cycle for all three phases using SPDM
 void run_inverter_cycle(int N, float amplitude) {
-    float qe_A = 0.0, qe_B = 0.0, qe_C = 0.0; // Cumulative quantization errors
-    float threshold = 0.5; // EXPERIMENT W/ THRESHOLD FOR CLEANER SIGNAL?? 
+    float qe_A = 0.0, qe_B = 0.0, qe_C = 0.0;
+    float threshold = 0.5;
 
     for (int i = 0; i < N; ++i) {
-        // Calculate SPDM waveform values for each phase
         float s_A = amplitude * std::sin(2 * M_PI * i / N);                // Phase A: 0 degrees
         float s_B = amplitude * std::sin(2 * M_PI * i / N - 2 * M_PI / 3); // Phase B: 120 degrees
         float s_C = amplitude * std::sin(2 * M_PI * i / N + 2 * M_PI / 3); // Phase C: 240 degrees
 
-        // Update quantization errors for each phase
         qe_A += s_A;
         qe_B += s_B;
         qe_C += s_C;
 
-        // Set pins high or low based on quantization errors and threshold
         bool v_A = qe_A > threshold;
         bool v_B = qe_B > threshold;
         bool v_C = qe_C > threshold;
 
-        // Adjust quantization errors with a smaller step for stability
-        qe_A -= v_A ? 0.5 : -0.5;
-        qe_B -= v_B ? 0.5 : -0.5;
-        qe_C -= v_C ? 0.5 : -0.5;
+        qe_A -= v_A ? 1 : -1;
+        qe_B -= v_B ? 1 : -1;
+        qe_C -= v_C ? 1 : -1;
 
-        // Set inverter pins for all 3 phases
         set_inverter_pins_(v_A, v_B, v_C);
     }
 }
@@ -79,33 +83,49 @@ int frequency_to_samples(float frequency) {
     return static_cast<int>(OPERATING_FREQUENCY / frequency - OFFSET);
 }
 
-// Secondary core program to monitor serial input
-void monitor_serial() {
-    while (true) {
-        LimControlMessage message = read_control_message();
-
-        mutex_enter_blocking(&lcmMutex);
-        lcm.velocity = message.velocity;
-        lcm.throttle = message.throttle;
-        mutex_exit(&lcmMutex);
-    }
-}
-
-// Main program to run on the primary core
+// Main inverter control loop, with INFINITE_FORWARD_MODE simulation
 void run_inverter() {
+    float velocity = 0.0f;  // Initialize velocity
+    bool reached_peak_thrust = false;
+
     while (true) {
-        mutex_enter_blocking(&lcmMutex);
-        float frequency = calculate_frequency(lcm.velocity, lcm.throttle);
-        mutex_exit(&lcmMutex);
+        if (INFINITE_FORWARD_MODE && !reached_peak_thrust) {
+            // Simulate LIM moving forward indefinitely until peak thrust
+            float omega = calculate_frequency(velocity, target_slip);
+            float thrust = calculate_thrust(omega, velocity);
 
-        // Set pins to low if frequency is zero
-        if (frequency == 0) {
-            set_inverter_pins_(false, false, false);
-            continue;
+            // Update velocity based on thrust and pod mass
+            float acceleration = thrust / pod_mass;
+            velocity += acceleration * delta_t;
+
+            // Calculate slip to determine if peak thrust is reached
+            float vs = L * omega / (2 * M_PI);
+            float current_slip = (vs - velocity) / vs;
+
+            // Check if LIM reached peak thrust condition based on slip
+            if (std::abs(current_slip - target_slip) < 0.01) {
+                reached_peak_thrust = true;
+            }
+
+            // Run inverter cycle
+            int N = frequency_to_samples(omega);
+            run_inverter_cycle(N, 1);
+
+        } else if (!INFINITE_FORWARD_MODE || reached_peak_thrust) {
+            // Default operation with external inputs or hold velocity if peak thrust reached
+            mutex_enter_blocking(&lcmMutex);
+            float slip = target_slip; // Use a fixed slip or implement logic for dynamic adjustment
+            float omega = calculate_frequency(lcm.velocity, slip);
+            mutex_exit(&lcmMutex);
+
+            if (omega == 0) {
+                set_inverter_pins_(false, false, false);
+                continue;
+            }
+
+            int N = std::max(1, frequency_to_samples(omega));
+            run_inverter_cycle(N, 1);
         }
-
-        int N = std::max(1, frequency_to_samples(frequency));
-        run_inverter_cycle(N, 1);
     }
 }
 
