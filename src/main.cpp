@@ -83,22 +83,21 @@ int frequency_to_samples(float frequency) {
     return static_cast<int>(OPERATING_FREQUENCY / frequency - OFFSET);
 }
 
-// Main inverter control loop, with INFINITE_FORWARD_MODE simulation
+// Main inverter control loop, with INFINITE_FORWARD_MODE simulation values
 void run_inverter() {
-    float velocity = 0.0f;  // Initialize velocity
+    float velocity = 0.0f;  
     bool reached_peak_thrust = false;
 
     while (true) {
         if (INFINITE_FORWARD_MODE && !reached_peak_thrust) {
-            // Simulate LIM moving forward indefinitely until peak thrust
+            // Simulate LIM moving forward until peak thrust
             float omega = calculate_frequency(velocity, target_slip);
             float thrust = calculate_thrust(omega, velocity);
 
-            // Update velocity based on thrust and pod mass
             float acceleration = thrust / pod_mass;
             velocity += acceleration * delta_t;
 
-            // Calculate slip to determine if peak thrust is reached
+            // Calculate slip to see if peak thrust is reached
             float vs = L * omega / (2 * M_PI);
             float current_slip = (vs - velocity) / vs;
 
